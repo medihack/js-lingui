@@ -191,18 +191,61 @@ describe("interpolate", () => {
   it("should not crash on a unicode sequences", () => {
     const cache = compile("Hey {name}!")
     expect(interpolate(cache, "en", [])({ name: "Joe\\xaa" })).toEqual(
-      "Hey Joeª!",
+      "Hey Joe\\xaa!",
     )
   })
 
   it("should not crash on a unicode sequences if the same string goes twice in a row", () => {
     const cache = compile("Hey {name}!")
     expect(interpolate(cache, "en", [])({ name: "Joe\\xaa" })).toEqual(
-      "Hey Joeª!",
+      "Hey Joe\\xaa!",
     )
     expect(interpolate(cache, "en", [])({ name: "Joe\\xaa" })).toEqual(
-      "Hey Joeª!",
+      "Hey Joe\\xaa!",
     )
+  })
+
+  describe("escape sequences", () => {
+    it("should not decode escape sequences in interpolated values", () => {
+      const msg = prepare("Open {name} failed")
+      expect(msg({ name: "C:\\scans\\x64\\report.pdf" })).toEqual(
+        "Open C:\\scans\\x64\\report.pdf failed",
+      )
+      expect(msg({ name: "Schilddr\\u00fcse.pdf" })).toEqual(
+        "Open Schilddr\\u00fcse.pdf failed",
+      )
+    })
+
+    it("should not decode escape sequences in values inside plural branches", () => {
+      const msg = prepare(
+        "{count, plural, one {# file: {name}} other {# files: {name}}}",
+      )
+      expect(msg({ count: 1, name: "C:\\scans\\x64" })).toEqual(
+        "1 file: C:\\scans\\x64",
+      )
+      expect(msg({ count: 2, name: "Schilddr\\u00fcse" })).toEqual(
+        "2 files: Schilddr\\u00fcse",
+      )
+    })
+
+    it("should decode escape sequences in the message text", () => {
+      const msg = prepare("Literal\\u00A0text\\x21 {name}")
+      expect(msg({ name: "\\x64" })).toEqual("Literal\u00A0text! \\x64")
+    })
+
+    it("should decode escape sequences in the message text of plural branches", () => {
+      const msg = prepare(
+        "{count, plural, one {#\\u00A0file {name}} other {#\\x20files {name}}}",
+      )
+      expect(msg({ count: 1, name: "\\x64" })).toEqual("1\u00A0file \\x64")
+      expect(msg({ count: 2, name: "\\u00fc" })).toEqual("2 files \\u00fc")
+    })
+
+    it("should not form an escape sequence across adjacent placeholders", () => {
+      const msg = prepare("{first}{second}")
+      expect(msg({ first: "\\u00", second: "fc" })).toEqual("\\u00fc")
+      expect(msg({ first: "\\x", second: "64" })).toEqual("\\x64")
+    })
   })
 
   describe("default variables", () => {

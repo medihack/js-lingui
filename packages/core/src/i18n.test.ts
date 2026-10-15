@@ -508,6 +508,28 @@ describe("I18n", () => {
     )
   })
 
+  it("._ should not decode escape sequences in values", () => {
+    const i18n = setupI18n({
+      locale: "de",
+      messages: {
+        de: {
+          compiled: ["Öffnen von ", ["name"], " fehlgeschlagen"],
+          uncompiled: "Öffnen\\u00A0von {name} fehlgeschlagen",
+        },
+      },
+    })
+
+    expect(i18n._("compiled", { name: "C:\\scans\\x64\\befund.pdf" })).toEqual(
+      "Öffnen von C:\\scans\\x64\\befund.pdf fehlgeschlagen",
+    )
+    expect(i18n.t("compiled", { name: "Schilddr\\u00fcse.pdf" })).toEqual(
+      "Öffnen von Schilddr\\u00fcse.pdf fehlgeschlagen",
+    )
+    expect(
+      i18n._({ id: "uncompiled", values: { name: "Schilddr\\u00fcse.pdf" } }),
+    ).toEqual("Öffnen\u00A0von Schilddr\\u00fcse.pdf fehlgeschlagen")
+  })
+
   it("._ should throw a meaningful error when locale is not set", () => {
     const i18n = setupI18n({})
     expect(() =>

@@ -120,7 +120,14 @@ export function interpolate(
         }
 
         if (isString(token)) {
-          return message + token
+          // Decode escape sequences in the message text only, never in
+          // interpolated values: they are user data and stay as they are.
+          return (
+            message +
+            (ESCAPE_SEQUENCE_REGEX.test(token)
+              ? decodeEscapeSequences(token)
+              : token)
+          )
         }
 
         const [name, type, format] = token
@@ -164,9 +171,6 @@ export function interpolate(
     }
 
     const result = formatMessage(translation)
-    if (isString(result) && ESCAPE_SEQUENCE_REGEX.test(result)) {
-      return decodeEscapeSequences(result)
-    }
     if (isString(result)) return result
     return result ? String(result) : ""
   }
